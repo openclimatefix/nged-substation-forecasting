@@ -11,6 +11,9 @@ repo which contains multiple Python packages.
 1. `uv sync`
 1. `uv run pre-commit install`
 
+To run Dagster:
+1. `uv run dagster dev`
+
 ---
 
 *Part of the [Open Climate Fix](https://github.com/orgs/openclimatefix/people) community.*
