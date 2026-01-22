@@ -208,6 +208,191 @@ consuming ensemble NWPs to produce an ensemble of Gaussians.
 
 TODO(Jack)
 
+# Directory layout
+
+This is up for discussion.
+
+nged-substation-forecast/
+├── pyproject.toml  ← uv workspace config
+│
+├── packages/
+│   ├── contracts/  
+│   │   │ # Define the _shape_ and _interfaces_ of the data.
+│   │   │ # e.g. "What's a valid forecast?", 
+│   │   │ #      "What should the forecast model return?"
+│   │   │
+│   │   ├── pyproject.toml ← Deps: pandera[polars], lightning, etc.
+│   │   ├── tests/ ← tests just for the contracts package
+│   │   └── src/contracts/ 
+│   │       ├── __init__.py 
+│   │       ├── data_schemas_and_semantics.py
+│   │       ├── base_sklearn_model.py
+│   │       └── base_lightning_model.py
+│   │
+│   ├── time_series_data/ 
+│   │   │  # The *logic* for downloading & prep. No orchestration here.
+│   │   │  # All data saved to disk must conform to the data contracts.
+│   │   │  # Orchestration lives in the main app. No LightningDataModules
+│   │   │  # here (they belong in the encoder packages). Don't write any
+│   │   │  # logic here that saves to disk. Dagster wants to control
+│   │   │  # *saving*. And Dagster expects to be able to give the data 
+│   │   │  # loading functions a time *window* to download.
+│   │   │ 
+│   │   ├── pyproject.toml ← Deps: contracts, polars, requests, etc.
+│   │   ├── tests/
+│   │   └── src/time_series_data/ 
+│   │       ├── __init__.py 
+│   │       └── nged_substation_power_flow.py 
+│   │
+│   ├── gridded_data/ 
+│   │   │  # Separate the "time series" and "gridded" data packages because
+│   │   │  # they have wildly different software dependencies.
+│   │   │ 
+│   │   ├── pyproject.toml ← Deps: xarray, rioxarray, polars, etc.
+│   │   ├── tests/
+│   │   └── src/gridded_data/ 
+│   │       ├── __init__.py 
+│   │       ├── cerra.py 
+│   │       ├── cm_saf.py 
+│   │       └── ecmwf_ifs_ensemble_from_dynamical.py
+│   │
+│   ├── plotting/
+│   │   │  # Lightweight, scriptable plotting functions that will primarily
+│   │   │  # be used during ML training, and sent to MLFlow. Can also be
+│   │   │  # used in manual data analysis.
+│   │   │ 
+│   │   ├── pyproject.toml <-- Deps: polars, altair, etc.
+│   │   ├── tests/
+│   │   └── src/plotting/ 
+│   │       ├── __init__.py 
+│   │       ├── training_plots.py <-- e.g., plot_loss_curve() 
+│   │       └── forecast_plots.py <-- e.g., plot_prediction_vs_actual()
+│   │
+│   ├── notebooks/
+│   │   │  # Manual, interactive data analysis using Marimo notebooks.
+│   │   │ 
+│   │   ├── pyproject.toml <-- Deps: marimo, altair, etc.
+│   │   ├── plot_nged_switching_events_with_weather.py 
+│   │   └── utils/ <- non-production code that's shared across notebooks.
+│   │       ├── __init__.py 
+│   │       └── …
+│   │
+│   ├── performance_evaluation/
+│   │   │  # Scriptable evaluation. e.g. takes a whole year of
+│   │   │  # forecast & ground truth & produces metrics & plots.
+│   │   │  # Also evaluate performance on other tasks, e.g. disaggregation.
+│   │   │  # Assumes all incoming data adheres to the data contracts.
+│   │   │  # Can be run manually as scripts. Or scripted from Dagster app.
+│   │   │ 
+│   │   ├── pyproject.toml
+│   │   ├── tests/
+│   │   ├── scripts/
+│   │   └── src/performance_evaluation/
+│   │       ├── __init__.py 
+│   │       ├── eval_forecast_backtest.py
+│   │       ├── eval_der_capacity_estimates.py
+│   │       ├── eval_disaggregation.py
+│   │       └── …
+│   │
+│   ├── loss_functions/
+│   │   │  # Lightweight, high-performance loss funcs. Used in training loop.
+│   │   │ 
+│   │   ├── pyproject.toml <- Deps: torch, torchmetrics. 
+│   │   │    # Crucially, do NOT depend on polars. 
+│   │   │    # These metrics must be torch-native (and GPU-native).
+│   │   │
+│   │   ├── tests/
+│   │   └── src/loss_functions/ 
+│   │       ├── __init__.py 
+│   │       ├── gaussian_mixture_model_neg_log_likelihood.py 
+│   │       └── quantile_loss.py
+│   │
+│   ├── weather_encoder/ 
+│   │   ├── pyproject.toml ← Deps: torch, lightning, polars. 
+│   │   │   # Does NOT depend on MLflow.
+│   │   │   # Contains the training *logic* specific to this encoder, 
+│   │   │   # implemented as an instance of LightningModule.
+│   │   │   # But the actual training loops are orchestrated by the main app.
+│   │   │   # Pre-trained encoders can be installed on their own, and the
+│   │   │   # weights & config can be loaded from the GitHub release assets.
+│   │   │
+│   │   ├── tests/
+│   │   └── src/weather_encoder/ 
+│   │       ├── __init__.py 
+│   │       ├── model.py <- implements our BaseLightningModel 
+│   │       │    # contract (including the predict_step that returns
+│   │       │    # the unified schema)
+│   │       ├── data.py <- implements P.LightningDataModule.
+│   │       └── load_pretrained_weights_and_config.py
+│   │
+│   └── time_encoder/ 
+│   │   ├── pyproject.toml ← Deps: torch, lightning, polars. 
+│   │   ├── tests/
+│   │   └── … 
+│   │
+│   ├── tft_forecaster/
+│   │   │  # Implements the temporal fusion transformer forecaster.
+│   │   │ 
+│   │   ├── pyproject.toml <- Deps: torch, lightning, polars, contracts, etc.
+│   │   │    # (tft_forecasts depends on contracts so it can implement BaseLightningModule). 
+│   │   │
+│   │   ├── tests/
+│   │   └── src/tft_forecaster/ 
+│   │       ├── __init__.py 
+│   │       ├── model.py
+│   │       ├── data.py
+│   │       └── load_pretrained_weights_and_config.py
+│   │
+│   ├── xgboost_forecaster/
+│   │   │  # Implements the XGBoost forecaster.
+│   │   │ 
+│   │   ├── pyproject.toml <- Deps: xgboost, contracts
+│   │   │    # (deps on contracts so it can implement BaseSKLearnModule). 
+│   │   │
+│   │   ├── tests/
+│   │   └── src/xgboost_forecaster/ 
+│   │       ├── __init__.py 
+│   │       ├── model.py <- implements our BaseSKLearnModel contract
+│   │       │    # (including the predict() that returns a pl.DataFrame that
+│   │       │    # conforms to our unified schema).
+│   │       ├── data.py <- loads data into RAM for XGBoost training
+│   │       └── load_pretrained_weights_and_config.py
+│   │
+│   ├── solar_torch/
+│   │   │  # Implements solar PV differentiable physics.
+│   │   │ 
+│   │   ├── pyproject.toml <- Deps: pytorch, etc.  Dev deps: pvlib (to create test data)
+│   │   │
+│   │   ├── tests/
+│   │   └── src/solar_torch/ 
+│   │       ├── __init__.py 
+│   │       └── ...
+│   │
+│   ├── graph_neural_net/
+│   │   │  # Implements the graph neural net forecaster.
+│   │   │ 
+│   │   ├── pyproject.toml <- Deps: torch, contracts, torch_geometric, etc.
+│   │   │   # Does NOT depend on the encoders. Instead accepts nn.Modules
+│   │   │   
+│   │   │  
+│   │   ├── tests/
+│   │   └── src/st_gnn_forecaster/ 
+│   │       ├── __init__.py 
+│   │       ├── model.py
+│   │       ├── data.py <- or maybe this should live in the app package
+│   │       └── load_pretrained_weights_and_config.py
+│
+├── tests/ ← just tests for the app
+│
+└── src/
+    |    # The main application. Orchestrates all packages above.
+    |    # Implements all training & validation loops.
+    |    # Orchestrates data download, data prep, and re-training. 
+    |   
+    └── substation_forecaster/ ← Deps: dagster, mlflow, sub-packages
+        ├── dagster_assets.py
+        └── … 
+
 
 # Plan
 
