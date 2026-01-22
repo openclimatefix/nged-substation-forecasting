@@ -1,13 +1,8 @@
 """Data schemas for the NGED substation forecast project."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
+from datetime import datetime
 
 import patito as pt
-
-if TYPE_CHECKING:
-    from datetime import datetime
 
 
 class SubstationMeasurement(pt.Model):

@@ -1,14 +1,10 @@
 """Logic for downloading Live Primary Data from NGED."""
 
-from __future__ import annotations
-
 import logging
-from typing import TYPE_CHECKING
 
 import polars as pl
 
-if TYPE_CHECKING:
-    from .ckan_client import NGEDCKANClient
+from .ckan_client import NGEDCKANClient
 
 logger = logging.getLogger(__name__)
 

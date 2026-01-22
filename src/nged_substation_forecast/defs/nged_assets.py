@@ -1,16 +1,10 @@
 """Dagster assets for NGED data."""
 
-from __future__ import annotations
-
-from typing import TYPE_CHECKING
-
+import polars as pl
 from dagster import AssetExecutionContext, Output, asset
 from contracts.data_schemas import SubstationMeasurement
 from data_nged.ckan_client import NGEDCKANClient
 from data_nged.live_primary_data import download_live_primary_data
-
-if TYPE_CHECKING:
-    import polars as pl
 
 
 @asset(group_name="nged")
