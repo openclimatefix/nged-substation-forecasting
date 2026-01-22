@@ -106,6 +106,9 @@ Per data type, let's use the same "converted" dataset for training, back-testing
 We'd append to this dataset in production. (Using separate datasets for training and inference is a
 big source of pain when moving models from research into production.)
 
+To make this research as easy as possible to reproduce, I want to make it super-easy for people to
+run parts of the data pipeline on their own machines.
+
 # "Test harness" production service
 
 Output as Parquet files. No need for a full API yet. Assume NGED can consume the Parquet files from
@@ -189,6 +192,7 @@ the BSP power to be the (rough) sum of its primary substations, and the same for
 
 ### Weather encoder
 
+TODO(Jack)
 
 
 ## Probabilistic
@@ -202,12 +206,16 @@ consuming ensemble NWPs to produce an ensemble of Gaussians.
 
 ## Multi-sequence alignment
 
+TODO(Jack)
+
+
 # Plan
 
-- Get Dagster running locally. We'll have a separate python package in our uv workspace for Dagster.
+1. Get Dagster running locally. We'll have a separate python package in our uv workspace for Dagster.
   Perhaps use the "root" python package for Dagster?
-- Implement code to download some NGED substation power data from NGED's CKAN API, and locations of
-  substations.
-- Visualise NGED power data, perhaps with a map of substations. Perhaps to visualise relationships
+2. Each Dagster how to:
+    - download some NGED substation power data from NGED's CKAN API, and locations of substations.
+    - grab CERRA & CM-SAF
+3. Visualise NGED power data, perhaps with a map of substations. Perhaps to visualise relationships
 between the power data and weather data, and perhaps to spot some "switching events" in the data.
-
+4. TODO...
