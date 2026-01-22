@@ -221,15 +221,15 @@ nged-substation-forecast/
 │   │   │ # e.g. "What's a valid forecast?",
 │   │   │ #      "What should the forecast model return?"
 │   │   │
-│   │   ├── pyproject.toml ← Deps: pandera[polars], lightning, etc.
+│   │   ├── pyproject.toml ← Deps: patito, polars, etc.
 │   │   ├── tests/ ← tests just for the contracts package
 │   │   └── src/contracts/
 │   │       ├── __init__.py
-│   │       ├── data_schemas_and_semantics.py
+│   │       ├── data_schemas.py
 │   │       ├── base_sklearn_model.py
 │   │       └── base_lightning_model.py
 │   │
-│   ├── time_series_data/
+│   ├── data_nged/
 │   │   │  # The *logic* for downloading & prep. No orchestration here.
 │   │   │  # All data saved to disk must conform to the data contracts.
 │   │   │  # Orchestration lives in the main app. No LightningDataModules
@@ -240,21 +240,34 @@ nged-substation-forecast/
 │   │   │
 │   │   ├── pyproject.toml ← Deps: contracts, polars, requests, etc.
 │   │   ├── tests/
-│   │   └── src/time_series_data/
+│   │   └── src/data_nged/
 │   │       ├── __init__.py
-│   │       └── nged_substation_power_flow.py
+│   │       ├── ckan_client.py
+│   │       └── live_primary_data.py
 │   │
-│   ├── gridded_data/
-│   │   │  # Separate the "time series" and "gridded" data packages because
-│   │   │  # they have wildly different software dependencies.
-│   │   │
+│   ├── data_cerra/
+│   │   │  # CERRA weather re-analysis data.
 │   │   ├── pyproject.toml ← Deps: xarray, rioxarray, polars, etc.
 │   │   ├── tests/
-│   │   └── src/gridded_data/
+│   │   └── src/data_cerra/
 │   │       ├── __init__.py
-│   │       ├── cerra.py
-│   │       ├── cm_saf.py
-│   │       └── ecmwf_ifs_ensemble_from_dynamical.py
+│   │       └── download.py
+│   │
+│   ├── data_cm_saf/
+│   │   │  # CM-SAF satellite-derived irradiance data.
+│   │   ├── pyproject.toml
+│   │   ├── tests/
+│   │   └── src/data_cm_saf/
+│   │       ├── __init__.py
+│   │       └── download.py
+│   │
+│   ├── data_dynamical/
+│   │   │  # NWP data from Dynamical.org.
+│   │   ├── pyproject.toml
+│   │   ├── tests/
+│   │   └── src/data_dynamical/
+│   │       ├── __init__.py
+│   │       └── client.py
 │   │
 │   ├── plotting/
 │   │   │  # Lightweight, scriptable plotting functions that will primarily
