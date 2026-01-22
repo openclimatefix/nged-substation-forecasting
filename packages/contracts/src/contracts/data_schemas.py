@@ -9,6 +9,7 @@ class SubstationMeasurement(pt.Model):
     """A single measurement from a substation."""
 
     substation_id: str
+    substation_name: str
     timestamp: datetime
     # Primary substations usually have flows in the tens of MW.
     # We'll set a loose range for now to catch extreme errors.

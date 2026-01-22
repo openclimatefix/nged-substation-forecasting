@@ -25,17 +25,30 @@ def download_live_primary_data(
     package = client.get_package_show(package_name)
     dfs = []
 
+    expected_columns = ["substation_id", "substation_name", "timestamp", "mw", "mvar"]
+
     # In a real scenario, we might want to parallelize this,
     # but let's start simple.
     for resource in package["resources"]:
-        if resource["format"].lower() == "csv":
+        url = resource.get("url")
+        if resource["format"].lower() == "csv" and url and not url.startswith("redacted"):
             # Extract substation name from resource name
             # Resource name is typically "Substation Name Primary Transformer Flows"
             substation_name = resource["name"].replace(" Primary Transformer Flows", "")
 
             try:
                 # Read CSV directly from URL using polars
-                df = pl.read_csv(resource["url"])
+                df = pl.read_csv(url)
+
+                # Check if columns exist before renaming
+                required_cols = {"ValueDate", "MW", "MVAr"}
+                if not required_cols.issubset(set(df.columns)):
+                    logger.warning(
+                        "Resource %s missing required columns. Found: %s",
+                        resource["name"],
+                        df.columns,
+                    )
+                    continue
 
                 # Standardize columns
                 df = df.rename({"ValueDate": "timestamp", "MW": "mw", "MVAr": "mvar"})
@@ -50,18 +63,28 @@ def download_live_primary_data(
                 )
 
                 # Select only relevant columns
-                df = df.select(["substation_id", "substation_name", "timestamp", "mw", "mvar"])
+                df = df.select(expected_columns)
 
-                # Cast timestamp to datetime
-                df = df.with_columns(pl.col("timestamp").str.to_datetime())
+                # Cast timestamp to datetime. We specify time_zone="UTC" because
+                # the data has a +00:00 suffix.
+                df = df.with_columns(pl.col("timestamp").str.to_datetime(time_zone="UTC"))
 
                 dfs.append(df)
+
             except Exception as e:
                 # Log error and continue with other resources
                 logger.error("Failed to download resource %s: %s", resource["name"], e)
 
     if not dfs:
-        return pl.DataFrame()
+        return pl.DataFrame(
+            schema={
+                "substation_id": pl.String,
+                "substation_name": pl.String,
+                "timestamp": pl.Datetime,
+                "mw": pl.Float64,
+                "mvar": pl.Float64,
+            },
+        )
 
     return pl.concat(dfs)
 
