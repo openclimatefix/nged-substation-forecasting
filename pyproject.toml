@@ -2,9 +2,9 @@
 
 # Metadata (see https://peps.python.org/pep-0621/)
 [project]
-name = "nged-substation-forecasting"
+name = "nged-substation-forecast"
 version = "0.0.1"
-description = "Forecasting net demand at primary, BSP, and GSP substations, and splitting the forecast into gross demand, solar, and wind per substation for National Grid Electricity Distribution (NGED)"
+description = "Forecast net demand at primary, BSP, and GSP substations, and split the forecast into gross demand, solar, and wind per substation for National Grid Electricity Distribution (NGED)"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.14"
 license = {text = "MIT License"}
@@ -28,7 +28,7 @@ dev = [
 ]
 
 [project.urls]
-repository = "https://github.com/openclimatefix/nged-substation-forecasting"
+repository = "https://github.com/openclimatefix/nged-substation-forecast"
 
 # --- UV WORKSPACE CONFIG ---
 # See: https://docs.astral.sh/uv/concepts/projects/workspaces

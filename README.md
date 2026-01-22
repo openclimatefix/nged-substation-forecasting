@@ -1,4 +1,4 @@
-# NGED substation forecasting
+# NGED substation forecast
 
 TODO(Jack): Adapt the OCF template README for this project :)
 
