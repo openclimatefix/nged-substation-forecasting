@@ -13,3 +13,6 @@ wheels/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Dagster
+.tmp_dagster_home_*
