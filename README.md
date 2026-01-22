@@ -2,25 +2,18 @@
 
 TODO(Jack): Adapt the OCF template README for this project :)
 
-## Directory structure
-
-This repo is a `uv` [workspace](https://docs.astral.sh/uv/concepts/projects/workspaces): A single
-repo which contains multiple Python packages. We also have a `Dagster` workspace for orchestrating
-data & ML pipelines.
-
-- `dg.toml`: Dagster workspace configuration.
-- `src/nged_substation_forecast/`: The main Dagster project with a nested src structure.
-- `deployments/local/`: Local Dagster deployment configuration managed by the dg tool.
-- `packages/`: Python packages within this `uv` workspace. 
-
 ## Development
 
-1. Install `uv`
+This repo is a `uv` [workspace](https://docs.astral.sh/uv/concepts/projects/workspaces): A single
+repo which contains multiple Python packages.
+
+1. Ensure [`uv`](https://docs.astral.sh/uv/) is installed following their [official documentation](https://docs.astral.sh/uv/getting-started/installation/).
 1. `uv sync`
 1. `uv run pre-commit install`
 
 To run Dagster:
 1. `uv run dg dev`
+1. Open http://localhost:3000 in your browser to see the project.
 
 ---
 

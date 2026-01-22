@@ -1,7 +1,0 @@
-directory_type = "project"
-
-[project]
-root_module = "nged_substation_forecast"
-registry_modules = [
-    "nged_substation_forecast.components.*",
-]

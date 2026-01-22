@@ -1,1 +1,1 @@
-"""Tests for the NGED substation forecast orchestration package."""
+"""Tests for the NGED substation forecast application."""
