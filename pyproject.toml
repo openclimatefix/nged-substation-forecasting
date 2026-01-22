@@ -16,7 +16,13 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
 ]
 dependencies = [
+    "dagster>=1.12.11",
+    "dagster-webserver>=1.12.11",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
@@ -35,6 +41,9 @@ repository = "https://github.com/openclimatefix/nged-substation-forecast"
 
 [tool.uv.workspace]
 members = ["packages/*"]
+
+[tool.dagster]
+module_name = "nged_substation_forecast.definitions"
 
 # --- LINTING AND TYPING CONFIGURATION --- #
 
