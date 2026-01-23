@@ -1,6 +1,8 @@
 """Data schemas for the NGED substation forecast project."""
 
 from datetime import datetime
+from collections.abc import Sequence
+from typing import Any, cast
 
 import patito as pt
 import polars as pl
@@ -24,6 +26,31 @@ class SubstationFlows(pt.Model):
 
     # Reactive power:
     MVAr: float | None = pt.Field(dtype=pl.Float32, allow_missing=True, ge=-1_000, le=1_000)
+
+    @classmethod
+    def validate(
+        cls,
+        dataframe: pl.DataFrame,
+        columns: Sequence[str] | None = None,
+        allow_missing_columns: bool = False,
+        allow_superfluous_columns: bool = False,
+        drop_superfluous_columns: bool = False,
+    ) -> pt.DataFrame["SubstationFlows"]:
+        """Validate the given dataframe, ensuring either MW or MVA is present."""
+        if "MW" not in dataframe.columns and "MVA" not in dataframe.columns:
+            raise ValueError(
+                "SubstationFlows dataframe must contain at least one of 'MW' or 'MVA' columns."
+            )
+        return cast(
+            pt.DataFrame["SubstationFlows"],
+            super().validate(
+                dataframe=dataframe,
+                columns=columns,
+                allow_missing_columns=allow_missing_columns,
+                allow_superfluous_columns=allow_superfluous_columns,
+                drop_superfluous_columns=drop_superfluous_columns,
+            ),
+        )
 
 
 class SubstationLocations(pt.Model):
