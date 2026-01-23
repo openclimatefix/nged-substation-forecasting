@@ -1,9 +1,6 @@
 """Logic for downloading Live Primary Data from NGED."""
 
 import logging
-from collections.abc import Iterable
-from dataclasses import dataclass, field
-from io import BytesIO
 from pathlib import Path
 from typing import IO
 
@@ -16,17 +13,7 @@ from .ckan_client import NGEDCKANClient
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class SubstationDownloadResult:
-    """The result of downloading and validating a single substation."""
-
-    substation_name: str
-    df: pt.DataFrame[SubstationFlows] | None = None
-    errors: list[str] = field(default_factory=list)
-
-
-@dataclass
-class SubstationResource:
+class SubstationResource(pt.Model):
     """A resource for a single substation."""
 
     substation_name: str
@@ -37,15 +24,7 @@ def get_substation_resource_urls(
     client: NGEDCKANClient,
     package_name: str,
 ) -> list[SubstationResource]:
-    """Get the URLs for all substation resources in a package.
-
-    Args:
-        client: The NGED CKAN client.
-        package_name: The name of the package.
-
-    Returns:
-        list[SubstationResource]: A list of substation resources.
-    """
+    """Get the URLs for all substation resources in a package."""
     package = client.get_package_show(package_name)
     resources = package.get("resources", [])
 
@@ -56,72 +35,17 @@ def get_substation_resource_urls(
         if resource_format.lower() == "csv" and url and not url.startswith("redacted"):
             # Extract substation name from resource name
             substation_name = resource["name"].replace(" Primary Transformer Flows", "")
-            substation_resources.append(SubstationResource(substation_name, url))
+            substation_resources.append(
+                SubstationResource(substation_name=substation_name, url=url)
+            )
 
     return substation_resources
-
-
-def download_live_primary_data(
-    client: NGEDCKANClient,
-    package_name: str,
-) -> Iterable[SubstationDownloadResult]:
-    """Download all live primary data for a given region (package).
-
-    Args:
-        client: The NGED CKAN client.
-        package_name: The name of the package (e.g., "live-primary-data---south-wales").
-
-    Yields:
-        SubstationDownloadResult: The result for each substation.
-    """
-    package = client.get_package_show(package_name)
-    resources = package.get("resources", [])
-    logger.info("Found %d resources in package %s", len(resources), package_name)
-
-    for resource in resources:
-        url = resource.get("url")
-        resource_format = resource.get("format", "")
-        if resource_format.lower() == "csv" and url and not url.startswith("redacted"):
-            # Extract substation name from resource name
-            substation_name = resource["name"].replace(" Primary Transformer Flows", "")
-
-            try:
-                # Use the client session to download the data with retries
-                response = client.session.get(url, timeout=30)
-                response.raise_for_status()
-
-                df = read_primary_substation_csv(
-                    BytesIO(response.content), substation_name=substation_name
-                )
-                yield SubstationDownloadResult(
-                    substation_name=substation_name,
-                    df=df,
-                )
-            except Exception as e:
-                logger.error(
-                    "Failed to download or validate resource %s from %s: %s",
-                    resource["name"],
-                    url,
-                    e,
-                )
-                yield SubstationDownloadResult(
-                    substation_name=substation_name,
-                    errors=[str(e)],
-                )
 
 
 def read_primary_substation_csv(
     csv_data: str | Path | IO[str] | IO[bytes] | bytes, substation_name: str
 ) -> pt.DataFrame[SubstationFlows]:
-    """Read a primary substation CSV and validate it against the schema.
-
-    Args:
-        csv_data: The CSV data to read.
-        substation_name: The name of the substation.
-
-    Returns:
-        pt.DataFrame[SubstationFlows]: The validated DataFrame.
-    """
+    """Read a primary substation CSV and validate it against the schema."""
     df: pl.DataFrame = pl.read_csv(csv_data)
     df = df.with_columns(substation_name=pl.lit(substation_name))
 
@@ -166,22 +90,15 @@ def download_substation_locations(
 
     for resource in package["resources"]:
         if resource["format"].lower() == "csv":
-            try:
-                # Use the client session to download the data with retries
-                response = client.session.get(resource["url"], timeout=30)
-                response.raise_for_status()
-
-                df = pl.read_csv(BytesIO(response.content))
-                df = df.rename(
-                    {
-                        "Substation Name": "substation_name",
-                        "Latitude": "latitude",
-                        "Longitude": "longitude",
-                    },
-                    strict=False,
-                )
-                return SubstationLocations.validate(df, drop_superfluous_columns=True)
-            except Exception as e:
-                logger.error("Failed to download metadata: %s", e)
+            df = pl.read_csv(resource["url"])
+            df = df.rename(
+                {
+                    "Substation Name": "substation_name",
+                    "Latitude": "latitude",
+                    "Longitude": "longitude",
+                },
+                strict=False,
+            )
+            return SubstationLocations.validate(df, drop_superfluous_columns=True)
 
     return pt.DataFrame[SubstationLocations](pl.DataFrame(schema=SubstationLocations.dtypes))
