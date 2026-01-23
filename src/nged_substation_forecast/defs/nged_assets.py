@@ -6,7 +6,6 @@ import requests
 from dagster import (
     AssetExecutionContext,
     AssetObservation,
-    BackfillPolicy,
     Config,
     ConfigurableResource,
     RetryPolicy,
@@ -44,10 +43,7 @@ class ParquetConfig(Config):
 
 
 def _get_all_substation_names() -> list[str]:
-    """Helper to fetch all substation names for partition definition.
-
-    This is called at module load time to define the static partition set.
-    """
+    """Helper to fetch all substation names for partition definition."""
     regions = [
         "live-primary-data---south-wales",
         "live-primary-data---south-west",
@@ -73,15 +69,11 @@ ckan = NGEDCKANResource()
 # Built-in retry policy for network-dependent assets
 network_retry_policy = RetryPolicy(max_retries=3, delay=10)
 
-# Backfill policy to allow materializing all partitions in a single run
-backfill_policy = BackfillPolicy.single_run()
-
 
 @asset(
     partitions_def=substation_partitions,
     group_name="nged",
     retry_policy=network_retry_policy,
-    backfill_policy=backfill_policy,
 )
 def live_primary_flows_csv(
     context: AssetExecutionContext,
@@ -89,10 +81,8 @@ def live_primary_flows_csv(
     config: RawCSVConfig,
 ) -> None:
     """Download CSV from CKAN. Save CSV to disk."""
-    substation_names = context.partition_keys
-
+    substation_name = context.partition_key
     client = ckan.get_client()
-
     regions = [
         "live-primary-data---south-wales",
         "live-primary-data---south-west",
@@ -100,32 +90,32 @@ def live_primary_flows_csv(
         "live-primary-data---east-midlands",
     ]
 
-    # Pre-fetch all urls to make lookup fast
-    all_urls = {}
+    # Find the specific URL for this partition
+    url = None
     for region in regions:
         resources = get_substation_resource_urls(client, region)
         for r in resources:
-            all_urls[r.substation_name] = r.url
+            if r.substation_name == substation_name:
+                url = r.url
+                break
+        if url:
+            break
 
-    for name in substation_names:
-        url = all_urls.get(name)
-        if not url:
-            context.log.warning(f"URL not found for substation {name}")
-            continue
+    if not url:
+        raise ValueError(f"URL not found for substation {substation_name}")
 
-        dest_path = Path(config.raw_data_path).expanduser() / f"{name}.csv"
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
+    dest_path = Path(config.raw_data_path).expanduser() / f"{substation_name}.csv"
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-        context.log.info(f"Downloading {name} from {url}")
-        res = requests.get(url, timeout=30)
-        res.raise_for_status()
-        dest_path.write_bytes(res.content)
+    context.log.info(f"Downloading {substation_name} from {url}")
+    res = requests.get(url, timeout=30)
+    res.raise_for_status()
+    dest_path.write_bytes(res.content)
 
 
 @asset(
     partitions_def=substation_partitions,
     group_name="nged",
-    backfill_policy=backfill_policy,
     deps=[live_primary_flows_csv],
 )
 def live_primary_flows_parquet(
@@ -133,38 +123,27 @@ def live_primary_flows_parquet(
     config: ParquetConfig,
 ) -> None:
     """Read CSV from disk. Convert to Parquet. Validate."""
-    substation_names = context.partition_keys
+    substation_name = context.partition_key
+    csv_path = Path(config.raw_data_path).expanduser() / f"{substation_name}.csv"
 
-    for name in substation_names:
-        csv_path = Path(config.raw_data_path).expanduser() / f"{name}.csv"
-        if not csv_path.exists():
-            context.log.warning(f"CSV not found for {name} at {csv_path}")
-            continue
+    context.log.info(f"Processing {substation_name}")
+    df = read_primary_substation_csv(csv_path, substation_name=substation_name)
 
-        context.log.info(f"Processing {name}")
-        try:
-            df = read_primary_substation_csv(csv_path, substation_name=name)
+    if df.is_empty():
+        return
 
-            if df.is_empty():
-                continue
+    output_path = (
+        Path(config.output_path).expanduser()
+        / f"substation_name={substation_name}"
+        / "data.parquet"
+    )
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    df.sort("timestamp").write_parquet(output_path)
 
-            output_path = (
-                Path(config.output_path).expanduser() / f"substation_name={name}" / "data.parquet"
-            )
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            df.sort("timestamp").write_parquet(output_path)
-
-            context.log_event(
-                AssetObservation(
-                    asset_key=context.asset_key,
-                    partition=name if context.has_partition_key else None,
-                    metadata={"row_count": df.height},
-                )
-            )
-        except Exception as e:
-            context.log.error(f"Failed to process substation {name}: {e}")
-            if len(substation_names) == 1:
-                # If we're running a single partition, we should still fail the run
-                raise e
-            # If we're in a multi-partition run (backfill), continue to other substations
-            continue
+    context.log_event(
+        AssetObservation(
+            asset_key=context.asset_key,
+            partition=substation_name,
+            metadata={"row_count": df.height},
+        )
+    )
