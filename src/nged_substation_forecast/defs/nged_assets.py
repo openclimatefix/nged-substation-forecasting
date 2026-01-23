@@ -27,7 +27,15 @@ class NgedLivePrimaryDataConfig(Config):
 def _download_and_validate_region(
     context: AssetExecutionContext, package_id: str
 ) -> Iterable[AssetObservation | AssetCheckResult | Output[pl.DataFrame]]:
-    """Download data for a region and yield outputs, observations and checks."""
+    """Download data for a region and yield outputs, observations and checks.
+
+    This function is a "helper generator." It contains the heavy lifting for all four NGED license regions:
+         1.  It downloads the data.
+         2.  It iterates through every substation and yields an AssetObservation (metadata about that specific substation).
+         3.  It yields an AssetCheckResult (telling Dagster if the whole region's data is healthy).
+         4.  Finally, it yields an Output (the actual DataFrame).
+
+    """
     client = NGEDCKANClient()
     df_data: tuple[pl.DataFrame, dict[str, str]] = download_live_primary_data(client, package_id)
     df, download_errors = df_data
@@ -38,35 +46,31 @@ def _download_and_validate_region(
     if failed_substations:
         substation_integrity_passed = False
 
-    # Process successful downloads
-    if not df.is_empty():
-        # Partition by substation to check each individually
-        for substation_name, substation_df in df.partition_by(
-            "substation_name", as_dict=True
-        ).items():
-            # Use our contract's integrity check (re-using code from contracts)
-            integrity_errors = SubstationFlows.check_integrity(substation_df)
+    # Partition by substation to check each individually
+    for substation_name, substation_df in df.partition_by("substation_name", as_dict=True).items():
+        # Use our contract's integrity check (re-using code from contracts)
+        integrity_errors = SubstationFlows.check_integrity(substation_df)
 
-            passed = len(integrity_errors) == 0
-            if not passed:
-                substation_integrity_passed = False
-                failed_substations.append(str(substation_name))
+        passed = len(integrity_errors) == 0
+        if not passed:
+            substation_integrity_passed = False
+            failed_substations.append(str(substation_name))
 
-            # Yield observation for this substation
-            yield AssetObservation(
-                asset_key=context.asset_key,
-                metadata={
-                    "substation": str(substation_name),
-                    "passed": passed,
-                    "validation_errors": MetadataValue.json(integrity_errors)
-                    if integrity_errors
-                    else "None",
-                    "row_count": len(substation_df),
-                    "latest_timestamp": str(substation_df["timestamp"].max())
-                    if not substation_df.is_empty()
-                    else "N/A",
-                },
-            )
+        # Yield observation for this substation
+        yield AssetObservation(
+            asset_key=context.asset_key,
+            metadata={
+                "substation": str(substation_name),
+                "passed": passed,
+                "validation_errors": MetadataValue.json(integrity_errors)
+                if integrity_errors
+                else "None",
+                "row_count": len(substation_df),
+                "latest_timestamp": str(substation_df["timestamp"].max())
+                if not substation_df.is_empty()
+                else "N/A",
+            },
+        )
 
     # Yield download errors as observations too
     for substation_name, error_msg in download_errors.items():
@@ -168,4 +172,4 @@ def nged_live_primary_data(
 
     # Save to Parquet. Polars can use obstore under the hood for cloud storage
     # when the appropriate dependencies are installed.
-    df.write_parquet(config.output_path, partition_by="month")
+    df.write_parquet(config.output_path, partition_by="month", compression="zstd")
