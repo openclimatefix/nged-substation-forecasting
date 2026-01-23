@@ -38,7 +38,7 @@ def download_live_primary_data(
             substation_name = resource["name"].replace(" Primary Transformer Flows", "")
 
             try:
-                df = _primary_substation_csv_to_dataframe(url, substation_name=substation_name)
+                df = __read_primary_substation_csv(url, substation_name=substation_name)
             except Exception as e:
                 # Log error and continue with other resources
                 logger.error("Failed to download resource %s: %s", resource["name"], e)
@@ -48,7 +48,7 @@ def download_live_primary_data(
     return pt.DataFrame(pl.concat(dfs))
 
 
-def _primary_substation_csv_to_dataframe(
+def __read_primary_substation_csv(
     csv_data: str | Path | IO[str] | IO[bytes] | bytes, substation_name: str
 ) -> pt.DataFrame[SubstationFlows]:
     df: pl.DataFrame = pl.read_csv(csv_data)
