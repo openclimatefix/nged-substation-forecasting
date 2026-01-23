@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Iterable
 from dataclasses import dataclass, field
+from io import BytesIO
 from pathlib import Path
 from typing import IO
 
@@ -49,7 +50,13 @@ def download_live_primary_data(
             substation_name = resource["name"].replace(" Primary Transformer Flows", "")
 
             try:
-                df = __read_primary_substation_csv(url, substation_name=substation_name)
+                # Use the client session to download the data with retries
+                response = client.session.get(url, timeout=30)
+                response.raise_for_status()
+
+                df = __read_primary_substation_csv(
+                    BytesIO(response.content), substation_name=substation_name
+                )
                 yield SubstationDownloadResult(
                     substation_name=substation_name,
                     df=df,
@@ -103,7 +110,11 @@ def download_substation_locations(
     for resource in package["resources"]:
         if resource["format"].lower() == "csv":
             try:
-                df = pl.read_csv(resource["url"])
+                # Use the client session to download the data with retries
+                response = client.session.get(resource["url"], timeout=30)
+                response.raise_for_status()
+
+                df = pl.read_csv(BytesIO(response.content))
                 df = df.rename(
                     {
                         "Substation Name": "substation_name",

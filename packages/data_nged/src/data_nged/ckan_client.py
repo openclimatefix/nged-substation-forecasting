@@ -3,6 +3,8 @@
 from typing import Any
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
 
 
 class NGEDCKANClient:
@@ -17,6 +19,18 @@ class NGEDCKANClient:
             base_url: Optional base URL for the CKAN API.
         """
         self.base_url = base_url or self.BASE_URL
+        self.session = requests.Session()
+
+        # Configure retries with exponential backoff
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=["HEAD", "GET", "OPTIONS"],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def get_package_show(self, package_id: str) -> dict[str, Any]:
         """Get details about a package.
@@ -27,7 +41,7 @@ class NGEDCKANClient:
         Returns:
             dict: The package details.
         """
-        response = requests.get(f"{self.base_url}/package_show?id={package_id}", timeout=30)
+        response = self.session.get(f"{self.base_url}/package_show?id={package_id}", timeout=30)
         response.raise_for_status()
         return response.json()["result"]
 
@@ -40,6 +54,6 @@ class NGEDCKANClient:
         Returns:
             list: The search results.
         """
-        response = requests.get(f"{self.base_url}/package_search?q={query}", timeout=30)
+        response = self.session.get(f"{self.base_url}/package_search?q={query}", timeout=30)
         response.raise_for_status()
         return response.json()["result"]["results"]
