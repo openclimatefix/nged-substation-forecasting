@@ -50,9 +50,17 @@ def download_live_primary_data(
                 dfs.append(df)
 
     if not dfs:
-        return pl.DataFrame(), errors
+        return pl.DataFrame(schema=SubstationFlows.dtypes), errors
 
-    return pl.concat(dfs), errors
+    df = pl.concat(dfs, how="diagonal")
+    # Ensure all columns from the schema are present (as nulls if missing)
+    for col, dtype in SubstationFlows.dtypes.items():
+        if col not in df.columns:
+            df = df.with_columns(pl.lit(None, dtype=dtype).alias(col))
+        else:
+            df = df.with_columns(pl.col(col).cast(dtype))
+
+    return df.select(SubstationFlows.columns), errors
 
 
 def __read_primary_substation_csv(
@@ -79,7 +87,7 @@ def __read_primary_substation_csv(
     for col in columns:
         df = df.with_columns(pl.col(col).cast(SubstationFlows.dtypes[col]))
 
-    return SubstationFlows.validate(df)
+    return SubstationFlows.validate(df, allow_missing_columns=True)
 
 
 def download_substation_locations(

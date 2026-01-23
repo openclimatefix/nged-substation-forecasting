@@ -102,7 +102,7 @@ def _download_and_validate_region(
 )
 def nged_live_primary_data_south_wales(context: AssetExecutionContext):
     """Live primary data for South Wales from NGED."""
-    return _download_and_validate_region(context, "live-primary-data---south-wales")
+    yield from _download_and_validate_region(context, "live-primary-data---south-wales")
 
 
 @asset(
@@ -113,7 +113,7 @@ def nged_live_primary_data_south_wales(context: AssetExecutionContext):
 )
 def nged_live_primary_data_south_west(context: AssetExecutionContext):
     """Live primary data for South West from NGED."""
-    return _download_and_validate_region(context, "live-primary-data---south-west")
+    yield from _download_and_validate_region(context, "live-primary-data---south-west")
 
 
 @asset(
@@ -124,7 +124,7 @@ def nged_live_primary_data_south_west(context: AssetExecutionContext):
 )
 def nged_live_primary_data_west_midlands(context: AssetExecutionContext):
     """Live primary data for West Midlands from NGED."""
-    return _download_and_validate_region(context, "live-primary-data---west-midlands")
+    yield from _download_and_validate_region(context, "live-primary-data---west-midlands")
 
 
 @asset(
@@ -135,7 +135,7 @@ def nged_live_primary_data_west_midlands(context: AssetExecutionContext):
 )
 def nged_live_primary_data_east_midlands(context: AssetExecutionContext):
     """Live primary data for East Midlands from NGED."""
-    return _download_and_validate_region(context, "live-primary-data---east-midlands")
+    yield from _download_and_validate_region(context, "live-primary-data---east-midlands")
 
 
 @asset(group_name="nged")

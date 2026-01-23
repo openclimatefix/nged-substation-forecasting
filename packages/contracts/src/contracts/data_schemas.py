@@ -60,8 +60,11 @@ class SubstationFlows(pt.Model):
         if "timestamp" in df.columns:
             max_ts = df["timestamp"].max()
             if isinstance(max_ts, datetime):
-                tz = max_ts.tzinfo or timezone.utc
-                now = datetime.now(tz)
+                # Ensure max_ts is aware if it's naive
+                if max_ts.tzinfo is None:
+                    max_ts = max_ts.replace(tzinfo=timezone.utc)
+
+                now = datetime.now(timezone.utc)
                 if max_ts < now - timedelta(hours=max_age_hours):
                     errors.append(f"Data is stale: last reading at {max_ts}")
             else:
