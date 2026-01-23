@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def download_live_primary_data(
     client: NGEDCKANClient,
     package_name: str,
-) -> pt.DataFrame[SubstationFlows]:
+) -> tuple[pl.DataFrame, dict[str, str]]:
     """Download all live primary data for a given region (package).
 
     Args:
@@ -24,10 +24,13 @@ def download_live_primary_data(
         package_name: The name of the package (e.g., "live-primary-data---south-wales").
 
     Returns:
-        pt.DataFrame: A dataframe containing the combined data for all substations.
+        tuple[pl.DataFrame, dict[str, str]]: A tuple of (dataframe, errors).
+            The dataframe contains the combined data for all successful substations.
+            The errors dict maps substation names to error messages.
     """
     package = client.get_package_show(package_name)
     dfs = []
+    errors = {}
 
     # We might want to parallelize this, but let's start simple.
     for resource in package["resources"]:
@@ -40,12 +43,16 @@ def download_live_primary_data(
             try:
                 df = __read_primary_substation_csv(url, substation_name=substation_name)
             except Exception as e:
-                # Log error and continue with other resources
+                # Record error and continue with other resources
                 logger.error("Failed to download resource %s: %s", resource["name"], e)
+                errors[substation_name] = str(e)
             else:
                 dfs.append(df)
 
-    return pt.DataFrame(pl.concat(dfs))
+    if not dfs:
+        return pl.DataFrame(), errors
+
+    return pl.concat(dfs), errors
 
 
 def __read_primary_substation_csv(
@@ -67,8 +74,10 @@ def __read_primary_substation_csv(
     df = df.with_columns(pl.col("timestamp").str.to_datetime(time_zone="UTC"))
     columns = set(SubstationFlows.columns).intersection(df.columns)
     df = df.select(columns)
-    dtypes = {col: SubstationFlows.dtypes[col] for col in columns}
-    df = df.cast(dtypes)
+    # Cast to ensure consistency with the schema
+    # We use a loop or map to avoid ambiguity in types if dict doesn't match Schema exactly
+    for col in columns:
+        df = df.with_columns(pl.col(col).cast(SubstationFlows.dtypes[col]))
 
     return SubstationFlows.validate(df)
 

@@ -1,7 +1,7 @@
 """Data schemas for the NGED substation forecast project."""
 
 from collections.abc import Sequence
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 import patito as pt
 import polars as pl
@@ -34,7 +34,7 @@ class SubstationFlows(pt.Model):
         allow_missing_columns: bool = False,
         allow_superfluous_columns: bool = False,
         drop_superfluous_columns: bool = False,
-    ) -> pt.DataFrame["SubstationFlows"]:
+    ) -> pt.DataFrame:
         """Validate the given dataframe, ensuring either MW or MVA is present."""
         if "MW" not in dataframe.columns and "MVA" not in dataframe.columns:
             raise ValueError(
@@ -47,6 +47,29 @@ class SubstationFlows(pt.Model):
             allow_superfluous_columns=allow_superfluous_columns,
             drop_superfluous_columns=drop_superfluous_columns,
         )
+
+    @classmethod
+    def check_integrity(cls, df: pl.DataFrame, max_age_hours: int = 24) -> list[str]:
+        """Check schema, range and freshness. Returns list of error messages."""
+        errors = []
+        try:
+            cls.validate(df)
+        except Exception as e:
+            errors.append(f"Validation failed: {e}")
+
+        if "timestamp" in df.columns:
+            max_ts = df["timestamp"].max()
+            if isinstance(max_ts, datetime):
+                tz = max_ts.tzinfo or timezone.utc
+                now = datetime.now(tz)
+                if max_ts < now - timedelta(hours=max_age_hours):
+                    errors.append(f"Data is stale: last reading at {max_ts}")
+            else:
+                errors.append("No data in timestamp column")
+        else:
+            errors.append("Missing timestamp column")
+
+        return errors
 
 
 class SubstationLocations(pt.Model):
