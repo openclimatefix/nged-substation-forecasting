@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import IO
+from typing import IO, Any, Final, cast
 
 import patito as pt
 import polars as pl
@@ -51,16 +51,22 @@ def download_live_primary_data(
 def _primary_substation_csv_to_dataframe(
     csv_data: str | Path | IO[str] | IO[bytes] | bytes, substation_name: str
 ) -> pt.DataFrame[SubstationFlows]:
-    # Read CSV directly from URL using polars
     df = pl.read_csv(csv_data)
-    df = df.rename({"ValueDate": "timestamp"})
+    df = df.rename(
+        {
+            "ValueDate": "timestamp",
+            "MW Inst": "MW",
+            "MVAr Inst": "MVAr",
+        }
+    )
     df = df.with_columns(substation_name=pl.lit(substation_name))
-    df = df.select(SubstationFlows.columns)
 
     # Cast timestamp to datetime. We specify time_zone="UTC" because
     # the data has a +00:00 suffix.
     df = df.with_columns(pl.col("timestamp").str.to_datetime(time_zone="UTC"))
-    df = df.cast(SubstationFlows.dtypes)
+    # Cast columns to the types specified in the schema
+    df = df.cast(cast(Any, SubstationFlows.dtypes))
+    df = df.select(SubstationFlows.columns)
 
     return SubstationFlows.validate(df)
 
@@ -68,7 +74,7 @@ def _primary_substation_csv_to_dataframe(
 def download_substation_locations(
     client: NGEDCKANClient,
 ) -> pt.DataFrame[SubstationLocations]:
-    """Download substation metadata (locations).
+    """Download substation locations.
 
     Args:
         client: The NGED CKAN client.
@@ -76,17 +82,22 @@ def download_substation_locations(
     Returns:
         pt.DataFrame: A dataframe containing substation metadata.
     """
-    package = client.get_package_show(package_id="primary-substation-location-easting-northings")
+    package_id: Final[str] = "primary-substation-location-easting-northings"
+    package = client.get_package_show(package_id=package_id)
 
     for resource in package["resources"]:
         if resource["format"].lower() == "csv":
-            try:
-                df = pl.read_csv(resource["url"])
-                # TODO(Jack): Just select(["substation_name", "latitude", "longitude"])
-                # See: https://connecteddata.nationalgrid.co.uk/dataset/primary-substation-location-easting-northings/resource/e06413f8-0d86-4a13-b5c5-db14829940ed
+            break
+    else:
+        raise RuntimeError("Could not find {package_id}")
 
-                return df  # TODO(Jack): Validate!
-            except Exception as e:
-                logger.error("Failed to download metadata: %s", e)
+    try:
+        df = pl.read_csv(resource["url"])
+        # TODO(Jack): Just select(["substation_name", "latitude", "longitude"])
+        # See: https://connecteddata.nationalgrid.co.uk/dataset/primary-substation-location-easting-northings/resource/e06413f8-0d86-4a13-b5c5-db14829940ed
 
-    return pl.DataFrame()
+        df = SubstationLocations.validate(df)
+    except Exception as e:
+        logger.error("Failed to download metadata: %s", e)
+
+    return df

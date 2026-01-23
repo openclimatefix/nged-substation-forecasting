@@ -19,7 +19,7 @@ class SubstationFlows(pt.Model):
     MVAr: float | None = pt.Field(dtype=pl.Float32, ge=-1_000, le=1_000)
 
 
-class SubstationLocation(pt.Model):
+class SubstationLocations(pt.Model):
     """Metadata for a substation."""
 
     substation_name: str
