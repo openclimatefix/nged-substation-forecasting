@@ -1,5 +1,6 @@
 """Generic CKAN client for interacting with NGED's Connected Data portal."""
 
+from pathlib import Path
 from typing import Any
 
 import requests
@@ -57,3 +58,18 @@ class NGEDCKANClient:
         response = self.session.get(f"{self.base_url}/package_search?q={query}", timeout=30)
         response.raise_for_status()
         return response.json()["result"]["results"]
+
+    def download_resource(self, url: str, dest_path: Path) -> None:
+        """Download a resource from a URL to a file.
+
+        Args:
+            url: The URL to download from.
+            dest_path: The path to save the file to.
+        """
+        response = self.session.get(url, timeout=30, stream=True)
+        response.raise_for_status()
+
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(dest_path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)

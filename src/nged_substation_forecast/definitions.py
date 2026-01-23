@@ -4,6 +4,8 @@ from pathlib import Path
 
 from dagster import Definitions, definitions, load_from_defs_folder
 
+from .defs.nged_assets import ckan
+
 
 @definitions
 def defs() -> Definitions:
@@ -12,4 +14,12 @@ def defs() -> Definitions:
     Returns:
         Definitions: The combined Dagster definitions.
     """
-    return load_from_defs_folder(path_within_project=Path(__file__).parent)
+    defs = load_from_defs_folder(path_within_project=Path(__file__).parent)
+    return Definitions.merge(
+        defs,
+        Definitions(
+            resources={
+                "ckan": ckan,
+            }
+        ),
+    )

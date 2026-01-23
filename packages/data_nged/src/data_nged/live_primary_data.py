@@ -25,6 +25,42 @@ class SubstationDownloadResult:
     errors: list[str] = field(default_factory=list)
 
 
+@dataclass
+class SubstationResource:
+    """A resource for a single substation."""
+
+    substation_name: str
+    url: str
+
+
+def get_substation_resource_urls(
+    client: NGEDCKANClient,
+    package_name: str,
+) -> list[SubstationResource]:
+    """Get the URLs for all substation resources in a package.
+
+    Args:
+        client: The NGED CKAN client.
+        package_name: The name of the package.
+
+    Returns:
+        list[SubstationResource]: A list of substation resources.
+    """
+    package = client.get_package_show(package_name)
+    resources = package.get("resources", [])
+
+    substation_resources = []
+    for resource in resources:
+        url = resource.get("url")
+        resource_format = resource.get("format", "")
+        if resource_format.lower() == "csv" and url and not url.startswith("redacted"):
+            # Extract substation name from resource name
+            substation_name = resource["name"].replace(" Primary Transformer Flows", "")
+            substation_resources.append(SubstationResource(substation_name, url))
+
+    return substation_resources
+
+
 def download_live_primary_data(
     client: NGEDCKANClient,
     package_name: str,
@@ -54,7 +90,7 @@ def download_live_primary_data(
                 response = client.session.get(url, timeout=30)
                 response.raise_for_status()
 
-                df = __read_primary_substation_csv(
+                df = read_primary_substation_csv(
                     BytesIO(response.content), substation_name=substation_name
                 )
                 yield SubstationDownloadResult(
@@ -74,9 +110,18 @@ def download_live_primary_data(
                 )
 
 
-def __read_primary_substation_csv(
+def read_primary_substation_csv(
     csv_data: str | Path | IO[str] | IO[bytes] | bytes, substation_name: str
 ) -> pt.DataFrame[SubstationFlows]:
+    """Read a primary substation CSV and validate it against the schema.
+
+    Args:
+        csv_data: The CSV data to read.
+        substation_name: The name of the substation.
+
+    Returns:
+        pt.DataFrame[SubstationFlows]: The validated DataFrame.
+    """
     df: pl.DataFrame = pl.read_csv(csv_data)
     df = df.with_columns(substation_name=pl.lit(substation_name))
 
