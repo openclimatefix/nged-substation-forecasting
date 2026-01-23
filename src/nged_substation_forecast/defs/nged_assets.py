@@ -88,16 +88,11 @@ def live_primary_flows_csv(
     ckan: NGEDCKANResource,
     config: RawCSVConfig,
 ) -> None:
-    """Download CSV from CKAN. Save CSV to disk.
-
-    Returns None to opt-out of IO manager, which avoids issues with single_run backfills.
-    """
-    if context.has_partition_key:
-        substation_names = [context.partition_key]
-    else:
-        substation_names = substation_partitions.get_partition_keys()
+    """Download CSV from CKAN. Save CSV to disk."""
+    substation_names = context.partition_keys
 
     client = ckan.get_client()
+
     regions = [
         "live-primary-data---south-wales",
         "live-primary-data---south-west",
@@ -138,10 +133,7 @@ def live_primary_flows_parquet(
     config: ParquetConfig,
 ) -> None:
     """Read CSV from disk. Convert to Parquet. Validate."""
-    if context.has_partition_key:
-        substation_names = [context.partition_key]
-    else:
-        substation_names = substation_partitions.get_partition_keys()
+    substation_names = context.partition_keys
 
     for name in substation_names:
         csv_path = Path(config.raw_data_path).expanduser() / f"{name}.csv"
@@ -171,8 +163,8 @@ def live_primary_flows_parquet(
             )
         except Exception as e:
             context.log.error(f"Failed to process substation {name}: {e}")
-            if context.has_partition_key:
+            if len(substation_names) == 1:
                 # If we're running a single partition, we should still fail the run
                 raise e
-            # If we're in a single_run backfill, continue to other substations
+            # If we're in a multi-partition run (backfill), continue to other substations
             continue
