@@ -87,11 +87,15 @@ def __read_primary_substation_csv(
     # South West    (e.g. Filton Dc) : ValueDate, Current Inst,              MVAr Inst, MW Inst, Volts Inst
     # New format    (e.g. Regent St) : site, time, unit, value
     if "unit" in df.columns and "value" in df.columns:
-        # Handle Regent Street primary substation (in the East Midlands), which uses a completely
-        # different CSV structure. See `example_csv_data/regent-street.csv`.
-        if not (df["unit"] == "MVA").all():
+        if (df["unit"] == "MVA").all():
+            # Handle Regent Street primary substation (in the East Midlands), which uses a completely
+            # different CSV structure. See `example_csv_data/regent-street.csv`.
+            df = df.rename({"time": "timestamp", "value": "MVA"}, strict=False)
+        elif (df["unit"] == "MW").all():
+            # Handle milford-haven-grid.csv.
+            df = df.rename({"time": "timestamp", "value": "MW"}, strict=False)
+        else:
             raise ValueError(f"Unexpected unit in CSV: {df['unit'].unique().to_list()}")
-        df = df.rename({"time": "timestamp", "value": "MVA"}, strict=False)
 
     df = df.rename(
         {"ValueDate": "timestamp", "MW Inst": "MW", "MVAr Inst": "MVAr", "Derived MVA": "MVA"},
