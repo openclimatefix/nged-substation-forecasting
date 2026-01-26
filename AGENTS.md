@@ -37,11 +37,12 @@ This project uses `uv` for dependency management and task execution.
 - **Small functions**: Prefer small function bodies that do one, well-defined thing.
 - **Minimalism**: Re-use existing tools (Polars, Xarray, Dagster) instead of reinventing logic.
 - **Comments**: Do not remove existing comments unless they are misleading or out of date. Only add
-  new comments if you're doing something that isn't obvious from the code. Write self-documenting
-  code, and assume the reader is fluent in Python.
+new comments if you're doing something that isn't obvious from the code. Write self-documenting
+code, and assume the reader is fluent in Python. I repeat: never delete existing comments unless you
+are 100% certain they are wrong! This is the law!
 - **Tests**: Unit tests should each be a short, simple function. For each function in the main code,
   there should be at least one test function that tests the "happy path", and one test function for
-  each of the main "unhappy" paths.
+  each of the main "unhappy" paths. Never relax an existing test just to get it to pass!
 
 ### Formatting & Linting (Ruff)
 - **Line Length**: 100 characters.
