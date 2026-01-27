@@ -17,7 +17,9 @@ To run Dagster:
 
 NGED CKAN API token:
 1. Log in to NGED's Connected Data platform.
-1. Go to "User Profile" -> API Tokens -> Create API token -> Copy your API token
+1. Go to "User Profile" -> API Tokens -> Create API token -> Copy your API token (if you need more
+   help then see [NGED's docs for getting an API
+   token](https://connecteddata.nationalgrid.co.uk/api-guidance#api-tokens).)
 1. Paste your API token into `.env` after `NGED_CKAN_TOKEN=`.
 
 ---
