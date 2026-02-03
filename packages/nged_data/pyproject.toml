@@ -1,5 +1,5 @@
 [project]
-name = "data-nged"
+name = "nged-data"
 version = "0.0.1"
 description = "Logic for downloading and prepping NGED data"
 requires-python = ">=3.14"

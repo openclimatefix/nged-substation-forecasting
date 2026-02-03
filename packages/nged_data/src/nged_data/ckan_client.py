@@ -11,8 +11,7 @@ import polars as pl
 from ckanapi import RemoteCKAN
 from contracts.data_schemas import SubstationLocations
 from dotenv import load_dotenv
-
-from data_nged.schemas import CkanResource, PackageSearchResult
+from nged_data.schemas import CkanResource, PackageSearchResult
 
 from .utils import change_dataframe_column_names_to_snake_case, find_one_match
 

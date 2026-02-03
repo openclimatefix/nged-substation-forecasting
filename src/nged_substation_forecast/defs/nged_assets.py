@@ -20,7 +20,7 @@ from dagster import (
     define_asset_job,
     sensor,
 )
-from data_nged.ckan_client import NgedCkanClient, httpx_get_with_auth
+from nged_data.ckan_client import NgedCkanClient, httpx_get_with_auth
 
 # Define Partitions
 # We use Multi-Partitions so every day's download is saved uniquely by (Date, Name)

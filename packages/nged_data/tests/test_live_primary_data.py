@@ -2,7 +2,7 @@ from pathlib import Path
 
 import polars as pl
 import pytest
-from data_nged.live_primary_data import SubstationLocations, read_primary_substation_csv
+from nged_data.live_primary_data import SubstationLocations, read_primary_substation_csv
 
 EXAMPLE_DATA_DIR = Path(__file__).parent.parent / "example_csv_data"
 
