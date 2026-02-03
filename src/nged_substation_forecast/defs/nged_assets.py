@@ -23,7 +23,7 @@ from data_nged.ckan_client import NgedCkanClient, httpx_get_with_auth
 
 # Define Partitions
 # We use Multi-Partitions so every download is saved uniquely by (Date, Name)
-daily_def = DailyPartitionsDefinition(start_date="2026-02-03", timezone="UTC")
+daily_def = DailyPartitionsDefinition(start_date="2026-02-01", timezone="UTC")
 substations_def = DynamicPartitionsDefinition(name="substations")
 composite_def = MultiPartitionsDefinition({"date": daily_def, "substation": substations_def})
 
@@ -35,7 +35,7 @@ class CkanConfig(Config):
 @asset(partitions_def=composite_def)
 def live_primary_csv(context: AssetExecutionContext, config: CkanConfig) -> Path:
     # Retrieve the keys
-    partition = context.partition_key.keys_by_dimension
+    partition = composite_def.get_partition_key_from_str(context.partition_key).keys_by_dimension
     date_str = partition["date"]
     substation_name = partition["substation"]
     csv_filename = PurePosixPath(config.url).name
@@ -51,7 +51,7 @@ def live_primary_csv(context: AssetExecutionContext, config: CkanConfig) -> Path
     dst_full_path = Path(
         Path("data") / "NGED" / "raw" / "live_primary_flows" / date_str / csv_filename
     )
-    dst_full_path.parent.mkdir(exist_ok=True)
+    dst_full_path.parent.mkdir(exist_ok=True, parents=True)
     dst_full_path.write_bytes(response.content)
 
     return dst_full_path
@@ -68,23 +68,42 @@ def live_primaries_sensor(context: SensorEvaluationContext) -> SensorResult:
     ckan = NgedCkanClient()
     ckan_resources = ckan.get_csv_resources_for_live_primary_substation_flows()
     # Use a set to get unique names:
-    live_substation_names = list(set(resource.name for resource in ckan_resources))
-    # We use today's date for the "Date" dimension
-    today_str = datetime.date.today().strftime("%Y-%m-%d")
+    live_substation_names = list(set(resource.name for resource in ckan_resources))[:5]
 
-    # Generate Run Requests with Metadata
+    # 1. Check if any dynamic partitions need to be added.
+    # We must add them BEFORE we can use them in MultiPartitionKey.
+    existing_substations = context.instance.get_dynamic_partitions("substations")
+    new_substations = [name for name in live_substation_names if name not in existing_substations]
+
+    if new_substations:
+        context.log.info(f"Adding {len(new_substations)} new substation partitions")
+        return SensorResult(
+            dynamic_partitions_requests=[
+                AddDynamicPartitionsRequest(
+                    partitions_def_name="substations", partition_keys=new_substations
+                )
+            ]
+        )
+
+    # 2. If no new partitions are needed, we can generate RunRequests.
+    # We use yesterday's date to ensure the DailyPartition is "complete" and thus valid.
+    yesterday = datetime.date.today() - datetime.timedelta(days=1)
+    yesterday_str = yesterday.strftime("%Y-%m-%d")
+
     run_requests = []
     for resource in ckan_resources:
         sub_name = resource.name
         csv_url = str(resource.url)
 
-        partition_key = MultiPartitionKey({"date": today_str, "substation": sub_name})
+        partition_key = MultiPartitionKey({"date": yesterday_str, "substation": sub_name})
 
         run_requests.append(
             RunRequest(
+                # This unique run_key prevents the sensor from triggering duplicate
+                # runs for the same data on every tick.
+                run_key=f"{yesterday_str}|{sub_name}",
                 partition_key=partition_key,
                 run_config=RunConfig(ops={"live_primary_csv": CkanConfig(url=csv_url)}),
-                # Optional: Add tags for easier searching in UI
                 tags={
                     "nged/csv_url": csv_url,
                     "nged/substation_name": sub_name,
@@ -93,11 +112,4 @@ def live_primaries_sensor(context: SensorEvaluationContext) -> SensorResult:
             )
         )
 
-    return SensorResult(
-        run_requests=run_requests,
-        dynamic_partitions_requests=[
-            AddDynamicPartitionsRequest(
-                partitions_def_name="substations", partition_keys=live_substation_names
-            )
-        ],
-    )
+    return SensorResult(run_requests=run_requests)
