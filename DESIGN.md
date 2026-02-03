@@ -230,7 +230,7 @@ nged-substation-forecast/
 │   │       ├── base_sklearn_model.py
 │   │       └── base_lightning_model.py
 │   │
-│   ├── data_nged/
+│   ├── nged_data/
 │   │   │  # The *logic* for downloading & prep. No orchestration here.
 │   │   │  # All data saved to disk must conform to the data contracts.
 │   │   │  # Orchestration lives in the main app. No LightningDataModules
@@ -241,32 +241,32 @@ nged-substation-forecast/
 │   │   │
 │   │   ├── pyproject.toml ← Deps: contracts, polars, requests, etc.
 │   │   ├── tests/
-│   │   └── src/data_nged/
+│   │   └── src/nged_data/
 │   │       ├── __init__.py
 │   │       ├── ckan_client.py
 │   │       └── live_primary_data.py
 │   │
-│   ├── data_cerra/
+│   ├── cerra_data/
 │   │   │  # CERRA weather re-analysis data.
 │   │   ├── pyproject.toml ← Deps: xarray, rioxarray, polars, etc.
 │   │   ├── tests/
-│   │   └── src/data_cerra/
+│   │   └── src/cerra_data/
 │   │       ├── __init__.py
 │   │       └── download.py
 │   │
-│   ├── data_cm_saf/
+│   ├── cm_saf_data/
 │   │   │  # CM-SAF satellite-derived irradiance data.
 │   │   ├── pyproject.toml
 │   │   ├── tests/
-│   │   └── src/data_cm_saf/
+│   │   └── src/cm_saf_data/
 │   │       ├── __init__.py
 │   │       └── download.py
 │   │
-│   ├── data_dynamical/
+│   ├── dynamical_data/
 │   │   │  # NWP data from Dynamical.org.
 │   │   ├── pyproject.toml
 │   │   ├── tests/
-│   │   └── src/data_dynamical/
+│   │   └── src/dynamical_data/
 │   │       ├── __init__.py
 │   │       └── client.py
 │   │
