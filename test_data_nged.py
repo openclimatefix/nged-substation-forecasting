@@ -94,6 +94,19 @@ def _(pl, resources):
 
 @app.cell
 def _():
+    from pydantic import HttpUrl
+    return (HttpUrl,)
+
+
+@app.cell
+def _(HttpUrl):
+    from pathlib import PurePosixPath
+    PurePosixPath(HttpUrl("http://example.com/foo/bar/baz.csv").path).name
+    return
+
+
+@app.cell
+def _():
     return
 
 

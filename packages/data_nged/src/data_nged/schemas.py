@@ -18,10 +18,10 @@ class PackageSearchInnerResult(BaseModel):
     # The fields below are no where near an exhaustive list of all the fields returned by CKAN!
     model_config = ConfigDict(extra="allow")
 
-    resources: list[CKANResource]
+    resources: list[CkanResource]
 
 
-class CKANResource(BaseModel):
+class CkanResource(BaseModel):
     # The fields listed below are just the ones we care about, not al
     # exhaustive list of all the fields returned by CKAN!
     model_config = ConfigDict(extra="allow")
