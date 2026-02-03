@@ -17,22 +17,16 @@ app = marimo.App(width="full")
 
 @app.cell
 def _():
-    from data_nged.ckan_client import NGEDCKANClient
+    from data_nged.ckan_client import NgedCkanClient
     from data_nged.process_flows import process_live_primary_substation_flows
     import polars as pl
-    return NGEDCKANClient, pl, process_live_primary_substation_flows
+    return NgedCkanClient, pl, process_live_primary_substation_flows
 
 
 @app.cell
-def _(NGEDCKANClient):
-    nged_ckan = NGEDCKANClient()
+def _(NgedCkanClient):
+    nged_ckan = NgedCkanClient()
     return (nged_ckan,)
-
-
-@app.cell
-def _(nged_ckan):
-    nged_ckan.api_key
-    return
 
 
 @app.cell
@@ -43,8 +37,14 @@ def _(nged_ckan):
 
 @app.cell
 def _(nged_ckan):
-    resources = nged_ckan.get_resources_for_live_primary_substation_flows()
+    resources = nged_ckan.get_csv_resources_for_live_primary_substation_flows()
     return (resources,)
+
+
+@app.cell
+def _(resources):
+    [print(f"{{'name': '{r.name}', 'url': '{r.url}'}},") for r in resources[:5]]
+    return
 
 
 @app.cell
@@ -59,12 +59,11 @@ def _(nged_ckan, process_live_primary_substation_flows, resources):
     dfs = {}
     for i, resource in enumerate(resources[:10]):
         print(f"{i:03d}", end="\r")
-        if resource.format == "CSV" and resource.size > 100:
-            try:
-                dfs[resource.name] = process_live_primary_substation_flows(nged_ckan.download_resource(resource))
-            except Exception as e:
-                print(e, resource)
-                continue
+        try:
+            dfs[resource.name] = process_live_primary_substation_flows(nged_ckan.download_resource(resource))
+        except Exception as e:
+            print(e, resource)
+            continue
     return (dfs,)
 
 

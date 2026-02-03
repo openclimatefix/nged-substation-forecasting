@@ -19,11 +19,11 @@ from dagster import (
     define_asset_job,
     sensor,
 )
-from data_nged.ckan_client import NgedCkanClient, httpx_get_with_auth
+from data_nged.ckan_client import httpx_get_with_auth
 
 # Define Partitions
 # We use Multi-Partitions so every download is saved uniquely by (Date, Name)
-daily_def = DailyPartitionsDefinition(start_date="2026-02-01", timezone="UTC")
+daily_def = DailyPartitionsDefinition(start_date="2026-02-01", timezone="UTC", end_offset=1)
 substations_def = DynamicPartitionsDefinition(name="substations")
 composite_def = MultiPartitionsDefinition({"date": daily_def, "substation": substations_def})
 
@@ -65,10 +65,34 @@ download_live_primary_csvs = define_asset_job(
 @sensor(job=download_live_primary_csvs)
 def live_primaries_sensor(context: SensorEvaluationContext) -> SensorResult:
     # Retrieve the full list of primary substations and URLs of CSVs
-    ckan = NgedCkanClient()
-    ckan_resources = ckan.get_csv_resources_for_live_primary_substation_flows()
+    # ckan = NgedCkanClient()
+    # ckan_resources = ckan.get_csv_resources_for_live_primary_substation_flows()
+
+    ckan_resources = [
+        {
+            "name": "Albrighton 11Kv Primary Transformer Flows",
+            "url": "https://connecteddata.nationalgrid.co.uk/dataset/33f120e8-b769-4c17-b3aa-1871b2bcd3cb/resource/d76510ad-174e-4a45-b0c7-3bfc2703663a/download/albrighton-11kv-primary-transformer-flows.csv",
+        },
+        {
+            "name": "Alderton 11Kv Primary Transformer Flows",
+            "url": "https://connecteddata.nationalgrid.co.uk/dataset/33f120e8-b769-4c17-b3aa-1871b2bcd3cb/resource/3b438649-db1d-4f57-893f-84e083e07e09/download/alderton-11kv-primary-transformer-flows.csv",
+        },
+        {
+            "name": "Alveston 11Kv Primary Transformer Flows",
+            "url": "https://connecteddata.nationalgrid.co.uk/dataset/33f120e8-b769-4c17-b3aa-1871b2bcd3cb/resource/bef9508e-b19c-4c80-960e-d011b911a59d/download/alveston-11kv-primary-transformer-flows.csv",
+        },
+        {
+            "name": "Bayston Hill 11Kv Primary Transformer Flows",
+            "url": "https://connecteddata.nationalgrid.co.uk/dataset/33f120e8-b769-4c17-b3aa-1871b2bcd3cb/resource/0d85ef15-2284-434b-bc96-a7f532e831dc/download/bayston-hill-11kv-primary-transformer-flows.csv",
+        },
+        {
+            "name": "Bearstone 11Kv Primary Transformer Flows",
+            "url": "https://connecteddata.nationalgrid.co.uk/dataset/33f120e8-b769-4c17-b3aa-1871b2bcd3cb/resource/915784e8-1476-44ab-8e75-0d4d0d5a9727/download/bearstone-11kv-primary-transformer-flows.csv",
+        },
+    ]
+
     # Use a set to get unique names:
-    live_substation_names = list(set(resource.name for resource in ckan_resources))[:5]
+    live_substation_names = list(set(resource["name"] for resource in ckan_resources[:5]))
 
     # 1. Check if any dynamic partitions need to be added.
     # We must add them BEFORE we can use them in MultiPartitionKey.
@@ -87,21 +111,20 @@ def live_primaries_sensor(context: SensorEvaluationContext) -> SensorResult:
 
     # 2. If no new partitions are needed, we can generate RunRequests.
     # We use yesterday's date to ensure the DailyPartition is "complete" and thus valid.
-    yesterday = datetime.date.today() - datetime.timedelta(days=1)
-    yesterday_str = yesterday.strftime("%Y-%m-%d")
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
 
     run_requests = []
     for resource in ckan_resources:
-        sub_name = resource.name
-        csv_url = str(resource.url)
+        sub_name = resource["name"]
+        csv_url = str(resource["url"])
 
-        partition_key = MultiPartitionKey({"date": yesterday_str, "substation": sub_name})
+        partition_key = MultiPartitionKey({"date": today_str, "substation": sub_name})
 
         run_requests.append(
             RunRequest(
                 # This unique run_key prevents the sensor from triggering duplicate
                 # runs for the same data on every tick.
-                run_key=f"{yesterday_str}|{sub_name}",
+                run_key=f"{today_str}|{sub_name}",
                 partition_key=partition_key,
                 run_config=RunConfig(ops={"live_primary_csv": CkanConfig(url=csv_url)}),
                 tags={
