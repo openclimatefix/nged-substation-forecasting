@@ -220,7 +220,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "patito", specifier = ">=0.8.0" },
+    { name = "patito", git = "https://github.com/JackKelly/patito.git?branch=use-validated-dataframe" },
     { name = "polars", specifier = ">=1.0.0" },
 ]
 
@@ -462,7 +462,7 @@ requires-dist = [
     { name = "contracts", editable = "packages/contracts" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "patito", specifier = ">=0.8.5" },
+    { name = "patito", git = "https://github.com/JackKelly/patito.git?branch=use-validated-dataframe" },
     { name = "polars", specifier = ">=1.0.0" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "requests", specifier = ">=2.31.0" },
@@ -951,6 +951,7 @@ dependencies = [
     { name = "dagster-webserver" },
     { name = "data-nged" },
     { name = "obstore" },
+    { name = "patito" },
     { name = "polars" },
     { name = "requests" },
 ]
@@ -972,6 +973,7 @@ requires-dist = [
     { name = "dagster-webserver", specifier = ">=1.12.11" },
     { name = "data-nged", editable = "packages/data_nged" },
     { name = "obstore" },
+    { name = "patito", git = "https://github.com/JackKelly/patito.git?branch=use-validated-dataframe" },
     { name = "polars", specifier = ">=1.0.0" },
     { name = "requests", specifier = ">=2.31.0" },
 ]
@@ -1036,15 +1038,11 @@ wheels = [
 [[package]]
 name = "patito"
 version = "0.8.5"
-source = { registry = "https://pypi.org/simple" }
+source = { git = "https://github.com/JackKelly/patito.git?branch=use-validated-dataframe#be05793cd1d2e8ec26f0b5e3fa76f11dfbecbd50" }
 dependencies = [
     { name = "polars" },
     { name = "pydantic" },
     { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/c8/a0/5b68034f3ee27adc4bf31f5cc2bed6c18ee4d5e28e1b52dc3dda339f0984/patito-0.8.5.tar.gz", hash = "sha256:c005f9dad8107a8952e50090119ccd967d232d3842f60d7353584490ff959459", size = 216387, upload-time = "2025-09-02T13:34:17.841Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/69/24/f825d9c4057f002c3ca760199899107b18e1923200d1059a15ba374bb436/patito-0.8.5-py3-none-any.whl", hash = "sha256:d7598ffbf6b388c93bd97f028fcd0ea9aaa923568a7ef819d6640b9650d97538", size = 43240, upload-time = "2025-09-02T13:34:16.635Z" },
 ]
 
 [[package]]
