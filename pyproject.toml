@@ -18,9 +18,10 @@ classifiers = [
 dependencies = [
     "dagster>=1.12.11",
     "dagster-webserver>=1.12.11",
+    "patito",
     "polars>=1.0.0",
     "requests>=2.31.0",
-    "data-nged",
+    "nged-data",
     "contracts",
     "obstore",
 ]
@@ -49,8 +50,10 @@ repository = "https://github.com/openclimatefix/nged-substation-forecast"
 members = ["packages/*"]
 
 [tool.uv.sources]
-data-nged = { workspace = true }
+nged-data = { workspace = true }
 contracts = { workspace = true }
+# TODO: Remove the line below if/when patito merges Jack's PR: https://github.com/JakobGM/patito/pull/161
+patito = { git = "https://github.com/JackKelly/patito.git", branch = "use-validated-dataframe" }
 
 # --- DAGSTER ---
 
@@ -69,7 +72,7 @@ registry_modules = [
 # --- LINTING AND TYPING CONFIGURATION --- #
 
 # Ruff configuration
-# * See https://beta.ruff.rs/docs/
+# See https://docs.astral.sh/ruff/configuration/
 [tool.ruff]
 line-length = 100
 

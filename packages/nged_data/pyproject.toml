@@ -1,5 +1,5 @@
 [project]
-name = "data-nged"
+name = "nged-data"
 version = "0.0.1"
 description = "Logic for downloading and prepping NGED data"
 requires-python = ">=3.14"
@@ -7,6 +7,12 @@ dependencies = [
     "contracts",
     "requests>=2.31.0",
     "polars>=1.0.0",
+    "dotenv>=0.9.9",
+    "httpx>=0.28.1",
+    "ckanapi>=4.9",
+    "patito",
+    "pydantic>=2.12.5",
+    "rapidfuzz>=3.14.3",
 ]
 
 [build-system]
