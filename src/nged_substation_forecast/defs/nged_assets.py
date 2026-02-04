@@ -82,8 +82,8 @@ def live_primary_parquet(context: AssetExecutionContext, live_primary_csv: Path)
     merged_df.write_parquet(parquet_path, compression="zstd")
 
 
-download_live_primary_csvs = define_asset_job(
-    name="download_live_primary_csvs", selection=[live_primary_csv]
+update_live_primary_flows = define_asset_job(
+    name="update_live_primary_flows", selection=[live_primary_csv, live_primary_parquet]
 )
 
 
@@ -91,7 +91,7 @@ _SECONDS_IN_AN_HOUR: Final[int] = 60 * 60
 
 
 @sensor(
-    job=download_live_primary_csvs,
+    job=update_live_primary_flows,
     default_status=DefaultSensorStatus.RUNNING,
     minimum_interval_seconds=_SECONDS_IN_AN_HOUR * 6,
 )
