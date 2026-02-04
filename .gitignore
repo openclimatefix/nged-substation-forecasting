@@ -18,3 +18,4 @@ __marimo__/
 .tmp_dagster_home_*
 .env
 data/
+history/

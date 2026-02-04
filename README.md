@@ -23,6 +23,16 @@ To run Dagster:
 1. `uv run dg dev`
 1. Open http://localhost:3000 in your browser to see the project.
 
+Optional: To allow Dagster to remember its state after you shut it down:
+1. `mkdir ~/dagster_home/`
+2. Put the following into `~/dagster_home/dagster.yaml`:
+    ```yaml
+    storage:
+      sqlite:
+        base_dir: "history"
+    ```
+3. Add `export DAGSTER_HOME=<dagster_home_path>` to your `.bashrc` file, and restart your terminal.
+
 NGED CKAN API token:
 1. Log in to NGED's Connected Data platform.
 1. Go to "User Profile" -> API Tokens -> Create API token -> Copy your API token (if you need more
