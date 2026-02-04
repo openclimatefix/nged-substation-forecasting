@@ -17,6 +17,7 @@ def _():
 
     from nged_data import ckan
     from nged_data.substation_names.align import join_location_table_to_live_primaries
+
     return (
         Final,
         Path,
@@ -44,21 +45,28 @@ def _(PurePosixPath, ckan, join_location_table_to_live_primaries, pl):
     _locations = ckan.get_primary_substation_locations()
     _live_primaries = ckan.get_csv_resources_for_live_primary_substation_flows()
 
-    joined = join_location_table_to_live_primaries(live_primaries=_live_primaries, locations=_locations)
+    joined = join_location_table_to_live_primaries(
+        live_primaries=_live_primaries, locations=_locations
+    )
     # joined = joined.filter(pl.col("simple_name").is_in(["Albrighton", "Alderton", "Alveston", "Bayston Hill", "Bearstone"]))
     joined = joined.with_columns(
         parquet_filename=pl.col("url").map_elements(
             lambda url: PurePosixPath(url.path).with_suffix(".parquet").name, return_dtype=pl.String
         )
     )
-    joined
     return (joined,)
 
 
 @app.cell
 def _(gpd, joined):
     pandas_df = joined.select(
-        ["substation_number", "latitude", "longitude", "parquet_filename", "substation_name_in_location_table"]
+        [
+            "substation_number",
+            "latitude",
+            "longitude",
+            "parquet_filename",
+            "substation_name_in_location_table",
+        ]
     ).to_pandas()
 
     gdf = gpd.GeoDataFrame(
@@ -90,6 +98,7 @@ def _(set_selected_index):
         new_index = change.get("new")
         if new_index is not None:
             set_selected_index(new_index.get("selected_index"))
+
     return (on_map_click,)
 
 
@@ -138,30 +147,43 @@ def _(
         selected_df = joined[selected_idx]
         parquet_filename = selected_df["parquet_filename"].item()
 
-        filtered_demand = pl.read_parquet(BASE_PARQUET_PATH / parquet_filename)
+        try:
+            filtered_demand = pl.read_parquet(BASE_PARQUET_PATH / parquet_filename)
+        except Exception:
+            right_pane = mo.md("e")
+        else:
+            power_column = "MW" if "MW" in filtered_demand else "MVA"
 
-        power_column = "MW" if "MW" in filtered_demand else "MVA"
-
-        # Create Time Series Chart
-        right_pane = (
-            alt.Chart(filtered_demand)
-            .mark_line()
-            .encode(
-                x="timestamp:T",
-                y=alt.Y(f"{power_column}:Q", title=f"Demand ({power_column})"),
-                color=alt.value("teal"),
-                tooltip=["timestamp", power_column],
+            # Create Time Series Chart
+            right_pane = (
+                alt.Chart(filtered_demand)
+                .mark_line()
+                .encode(
+                    x=alt.X(
+                        "timestamp:T",
+                        axis=alt.Axis(
+                            format="%H:%M %b %d",
+                            # labelAngle=-45,  # Tilting labels often helps clarity
+                        ),
+                    ),
+                    y=alt.Y(f"{power_column}:Q", title=f"Demand ({power_column})"),
+                    color=alt.value("teal"),
+                    tooltip=["timestamp", power_column],
+                )
+                .properties(
+                    title=selected_df["substation_name_in_location_table"].item(),
+                    height=500,
+                    width="container",  # Fill available width
+                )
             )
-            .properties(
-                title=selected_df["substation_name_in_location_table"].item(),
-                height=300,
-                width="container",  # Fill available width
-            )
-        )
 
-
-    dashboard = mo.hstack([m, right_pane, refresh], widths=[4, 4, 1])  # , gap="2rem")
+    dashboard = mo.vstack([m, right_pane, refresh], heights=[4, 4, 1])  # , gap="2rem")
     dashboard
+    return
+
+
+@app.cell
+def _():
     return
 
 
