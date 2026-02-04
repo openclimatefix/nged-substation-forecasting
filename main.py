@@ -9,9 +9,9 @@ def _():
     import marimo as mo
     import polars as pl
     import altair as alt
-    from vega_datasets import data
     from typing import Final
     from pathlib import PurePosixPath, Path
+    import leafmap
 
     from nged_data import ckan
     from nged_data.substation_names.align import join_location_table_to_live_primaries
@@ -21,8 +21,8 @@ def _():
         PurePosixPath,
         alt,
         ckan,
-        data,
         join_location_table_to_live_primaries,
+        leafmap,
         mo,
         pl,
     )
@@ -53,50 +53,25 @@ def _(PurePosixPath, ckan, join_location_table_to_live_primaries, pl):
 
 
 @app.cell
-def _(Final, alt, data, joined, mo):
-    # Define the Base Map (Optional but recommended for context)
-    # We use a simple background of the world or specific region
-    countries = alt.topo_feature(data.world_110m.url, "countries")
+def _(joined, leafmap):
+    map = leafmap.Map(center=[52, -2.5], zoom=6.5, draw_control=False, measure_control=False, fullscreen_control=False)
 
-    # URL for UK Local Authority Districts (Medium Resolution)
-    uk_url = "https://raw.githubusercontent.com/martinjc/UK-GeoJSON/master/json/administrative/gb/lad.json"
-    #map_background = alt.Chart(alt.Data(url=uk_url, format=alt.DataFormat(type="json"))).mark_geoshape(
-    map_background = alt.Chart(countries).mark_geoshape(
-        fill="#f0f0f0", stroke="white"
+    map.add_points_from_xy(
+        joined.to_pandas(), x="longitude", y="latitude", layer_name="Primary substations", options={"maxClusterRadius": 30}
     )
-
-
-    SUBSTATION_NAME_COL: Final[str] = "simple_name"
-
-    select_substation = alt.selection_point(fields=[SUBSTATION_NAME_COL])
-
-    substation_points = (
-        alt.Chart(joined)
-        .mark_circle(size=30, color="teal")
-        .encode(
-            longitude="longitude:Q",
-            latitude="latitude:Q",
-            tooltip=["substation_name_in_location_table", "latitude", "longitude"],
-            opacity=alt.condition(select_substation, alt.value(1), alt.value(0.2)),
-            color=alt.condition(select_substation, alt.value("teal"), alt.value("gray")),
-        )
-    ).add_params(select_substation)
-
-    final_map = (map_background + substation_points).project(
-        "mercator",
-        scale=3000,  # Zoom level (high for local data)
-        center=[-1, 52.5],  # Center on your data
-    ).interactive()
-
-    # Create the Marimo UI Element
-    # This renders the chart and makes it reactive
-    map_widget = mo.ui.altair_chart(final_map)
-    return (map_widget,)
+    return (map,)
 
 
 @app.cell
-def _(BASE_PARQUET_PATH: "Final[Path]", alt, joined, map_widget, mo, pl):
-    selected_df = map_widget.apply_selection(joined)
+def _(map):
+    type(map)
+    return
+
+
+@app.cell
+def _(BASE_PARQUET_PATH: "Final[Path]", alt, joined, map, mo, pl):
+    # selected_df = map_widget.apply_selection(joined)
+    selected_df = joined[0]
 
     if selected_df.height == 0:
         right_pane = mo.md(
@@ -135,7 +110,7 @@ def _(BASE_PARQUET_PATH: "Final[Path]", alt, joined, map_widget, mo, pl):
         right_pane = mo.ui.altair_chart(ts_chart)
 
 
-    dashboard = mo.hstack([map_widget, right_pane], widths=[2, 3], gap="2rem")
+    dashboard = mo.hstack([map, right_pane], widths=[2, 3], gap="2rem")
     dashboard
     return
 
