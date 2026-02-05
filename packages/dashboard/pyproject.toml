@@ -1,0 +1,18 @@
+[project]
+name = "dashboard"
+version = "0.1.0"
+description = "Interactive dashboard web app for visualising NGED data"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "altair>=6.0.0",
+    "geopandas>=1.1.2",
+    "lonboard>=0.13.0",
+    "marimo>=0.19.7",
+    "notebooks",
+    "polars>=1.37.1",
+    "pyarrow>=23.0.0",
+]
+
+[tool.uv.sources]
+notebooks = { workspace = true }

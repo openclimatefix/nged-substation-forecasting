@@ -99,15 +99,15 @@ def live_primaries_sensor(context: SensorEvaluationContext) -> SensorResult:
     # Retrieve the full list of primary substation_names and URLs of CSVs
     ckan_resources = ckan.get_csv_resources_for_live_primary_substation_flows()
 
-    selected_for_testing = [  # TODO(Jack): Remove these after testing!
-        "Albrighton 11Kv Primary Transformer Flows",
-        "Alderton 11Kv Primary Transformer Flows",
-        "Alveston 11Kv Primary Transformer Flows",
-        "Bayston Hill 11Kv Primary Transformer Flows",
-        "Bearstone 11Kv Primary Transformer Flows",
-    ]
-    ckan_resources = [r for r in ckan_resources if r.name in selected_for_testing]
-
+    # selected_for_testing = [  # TODO(Jack): Remove these after testing!
+    #     "Albrighton 11Kv Primary Transformer Flows",
+    #     "Alderton 11Kv Primary Transformer Flows",
+    #     "Alveston 11Kv Primary Transformer Flows",
+    #     "Bayston Hill 11Kv Primary Transformer Flows",
+    #     "Bearstone 11Kv Primary Transformer Flows",
+    # ]
+    # ckan_resources = [r for r in ckan_resources if r.name in selected_for_testing]
+    #
     run_requests: list[RunRequest] = []
     substation_names: set[str] = set()
     last_modified_date_strings: set[str] = set()
