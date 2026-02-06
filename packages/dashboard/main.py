@@ -40,6 +40,10 @@ def _():
 
 @app.cell
 def _(joined):
+    # TODO(Jack): *Surely* there must be a more elegant way to get lat and lon points into lonboard,
+    # without having to go via Pandas and GeoPandas?
+    # I've asked for help: https://github.com/developmentseed/lonboard/issues/1098
+    # In that issue, I've also sketched out some ideas of how to skip Pandas & GeoPandas.
     pandas_df = joined.select(
         [
             "substation_number",
