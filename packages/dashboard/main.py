@@ -1,11 +1,9 @@
 import marimo
 
-__generated_with = "0.19.7"
+__generated_with = "0.19.8"
 app = marimo.App(width="full")
 
-
-@app.cell
-def _():
+with app.setup:
     import marimo as mo
     import polars as pl
     import altair as alt
@@ -17,30 +15,14 @@ def _():
 
     from nged_data import ckan
     from nged_data.substation_names.align import join_location_table_to_live_primaries
-    return (
-        Final,
-        Path,
-        PurePosixPath,
-        alt,
-        ckan,
-        gpd,
-        join_location_table_to_live_primaries,
-        lonboard,
-        mo,
-        pl,
-    )
 
-
-@app.cell
-def _(Final, Path):
     BASE_PARQUET_PATH: Final[Path] = Path(
         "~/dev/python/nged-substation-forecast/data/NGED/parquet/live_primary_flows"
     ).expanduser()
-    return (BASE_PARQUET_PATH,)
 
 
 @app.cell
-def _(PurePosixPath, ckan, join_location_table_to_live_primaries, pl):
+def _():
     _locations = ckan.get_primary_substation_locations()
     _live_primaries = ckan.get_csv_resources_for_live_primary_substation_flows()
 
@@ -57,7 +39,7 @@ def _(PurePosixPath, ckan, join_location_table_to_live_primaries, pl):
 
 
 @app.cell
-def _(gpd, joined):
+def _(joined):
     pandas_df = joined.select(
         [
             "substation_number",
@@ -77,13 +59,13 @@ def _(gpd, joined):
 
 
 @app.cell
-def _(mo):
+def _():
     get_selected_index, set_selected_index = mo.state(None)
     return get_selected_index, set_selected_index
 
 
 @app.cell
-def _(mo):
+def _():
     refresh = mo.ui.refresh(default_interval="1s")
     return (refresh,)
 
@@ -97,11 +79,12 @@ def _(set_selected_index):
         new_index = change.get("new")
         if new_index is not None:
             set_selected_index(new_index.get("selected_index"))
+
     return (on_map_click,)
 
 
 @app.cell
-def _(gdf, lonboard, on_map_click):
+def _(gdf, on_map_click):
     layer = lonboard.ScatterplotLayer.from_geopandas(
         gdf,
         pickable=True,  # enables the selection events
@@ -121,16 +104,7 @@ def _(gdf, lonboard, on_map_click):
 
 
 @app.cell
-def _(
-    BASE_PARQUET_PATH: "Final[Path]",
-    alt,
-    get_selected_index,
-    joined,
-    m,
-    mo,
-    pl,
-    refresh,
-):
+def _(get_selected_index, joined, m, refresh):
     # Retrieve the current selection
     selected_idx = get_selected_index()
 

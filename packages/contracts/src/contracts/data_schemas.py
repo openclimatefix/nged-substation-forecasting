@@ -23,8 +23,9 @@ class SubstationFlows(pt.Model):
     # Reactive power:
     MVAr: float | None = pt.Field(dtype=pl.Float32, allow_missing=True, ge=-1_000, le=1_000)
 
+    # TODO(Jack): Try removing the ignore[invalid-method-override]. I suspect this is a bug in `ty`?
     @classmethod
-    def validate(
+    def validate(  # type: ignore[invalid-method-override]
         cls,
         dataframe: pl.DataFrame,
         columns: Sequence[str] | None = None,
